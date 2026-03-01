@@ -1,0 +1,257 @@
+SVS-FLAMEFLOW v1.0
+Self-Verifying Science Protocol for Fluid and Combustion Systems
+================================================================
+
+OVERVIEW
+--------
+SVS-FLAMEFLOW v1.0 is a deterministic verification protocol for validating
+fluid and combustion models using calibration-locked residual bounds and
+invariant physical constraints.
+
+It is not a simulator.
+It is not a CFD engine.
+It is not a combustion solver.
+
+It is a scientific verification layer.
+
+Its purpose is to determine whether a model is physically admissible and
+consistent with measured data under instrument-defined noise limits.
+
+----------------------------------------------------------------
+
+FUNDAMENTAL RULE
+----------------
+For each measurement channel k:
+
+    r_k = RMSE(O_k - Ohat_k) / sigma_k
+
+Where:
+
+    O_k       = observed sensor measurements
+    Ohat_k    = model predictions
+    sigma_k   = standard deviation of measurement noise (from calibration)
+    alpha     = fixed tolerance multiplier (default = 3.0)
+
+Acceptance condition:
+
+    r_k < alpha     for all channels k
+
+Tolerance definition:
+
+    epsilon_k = alpha * sigma_k
+
+epsilon is defined strictly from calibration and is locked before fitting.
+It may not be modified after fitting.
+
+----------------------------------------------------------------
+
+WHAT FLAMEFLOW GUARANTEES
+--------------------------
+If a model passes SVS-FLAMEFLOW v1.0, then:
+
+1) It agrees with measured data within calibration-defined noise bounds.
+2) It satisfies physical admissibility constraints.
+3) It cannot pass through post-hoc tolerance manipulation.
+4) Its configuration is cryptographically pinned.
+5) Its verification record is append-only and auditable.
+
+----------------------------------------------------------------
+
+CALIBRATION REQUIREMENTS
+-------------------------
+Each sensor must provide:
+
+    sensor_id
+    channel
+    gain
+    offset
+    sampling_rate
+    sigma (noise estimate)
+    timestamp
+    calibration_method
+
+sigma must originate from calibration experiments.
+sigma must NOT be derived from model residuals.
+
+epsilon is computed only as:
+
+    epsilon_k = alpha * sigma_k
+
+----------------------------------------------------------------
+
+MULTI-CHANNEL VERIFICATION
+---------------------------
+All channels must pass simultaneously.
+
+Typical channels include:
+
+    pressure
+    temperature
+    flow_rate
+    velocity
+    species fractions
+    turbulence quantities
+
+Passing one channel while failing another is not permitted.
+
+----------------------------------------------------------------
+
+PHYSICAL ADMISSIBILITY CONSTRAINTS
+-----------------------------------
+Minimum constraint set:
+
+    density >= 0
+    temperature >= 0
+    species_fraction_i >= 0
+    sum(species_fractions) = 1
+    turbulence_k >= 0         (if used)
+    eddy_viscosity >= 0       (if used)
+
+Optional extensions may include:
+
+    conservation_of_mass
+    conservation_of_momentum
+    conservation_of_energy
+    PDE residual norms
+    entropy inequalities
+
+Any constraint violation results in failure.
+
+----------------------------------------------------------------
+
+ANTI-OVERFIT GATES
+------------------
+Optional verification gates:
+
+    holdout_verification_ok
+    reproducibility_ok
+
+If enabled, both must be true for acceptance.
+
+----------------------------------------------------------------
+
+SETUP HASH
+----------
+Each verification computes:
+
+    setup_hash = SHA256(
+        geometry +
+        calibration_packet +
+        constraint_manifest +
+        objective_spec
+    )
+
+The setup_hash guarantees:
+
+    configuration immutability
+    constraint immutability
+    tolerance immutability
+    objective immutability
+
+Any modification produces a new hash.
+
+----------------------------------------------------------------
+
+RUN RECORD
+----------
+Each verification produces a RunRecord containing:
+
+    experiment_id
+    protocol_id
+    timestamp
+    operator
+    setup_hash
+    solver metadata
+    fitted parameters
+    residual summary
+    constraint violations
+    verdict
+    reason codes
+
+RunRecords are append-only and typically stored in JSONL format.
+
+----------------------------------------------------------------
+
+PASS / FAIL LOGIC
+-----------------
+Failure occurs if any of the following are triggered:
+
+    FAIL_CALIBRATION
+    FAIL_OBSERVABILITY
+    FAIL_CONSTRAINT
+    FAIL_RESIDUAL_THRESHOLD
+    FAIL_OVERFIT
+    FAIL_REPRODUCIBILITY
+    FAIL_NUMERICS
+    FAIL_CLOSURE_MODEL
+
+Pass occurs only if none of the above are triggered.
+
+----------------------------------------------------------------
+
+WHAT FLAMEFLOW IS NOT
+----------------------
+FlameFlow is not:
+
+    a CFD solver
+    a combustion chemistry engine
+    a numerical integrator
+    a simulation package
+
+It verifies the scientific validity of such systems.
+
+----------------------------------------------------------------
+
+INTENDED APPLICATIONS
+----------------------
+    combustion validation
+    CFD verification
+    hydrogen flame research
+    gas turbine validation
+    internal combustion research
+    experimental reproducibility enforcement
+    scientific audit systems
+
+----------------------------------------------------------------
+
+PROTOCOL IDENTITY
+------------------
+SVS-FLAMEFLOW-v1.0
+
+Any modification to:
+
+    epsilon definition
+    residual definition
+    constraint set
+    objective structure
+    pass/fail logic
+
+requires a new protocol version.
+
+----------------------------------------------------------------
+
+PHILOSOPHY
+----------
+Scientific models frequently fail due to:
+
+    tolerance manipulation
+    single-channel fitting
+    hidden constraint violations
+    silent configuration changes
+    overfitting to noise
+
+SVS-FLAMEFLOW prevents these failure modes by binding model acceptance to:
+
+    calibration noise
+    invariant constraints
+    reproducibility
+    cryptographic configuration pinning
+
+Core principle:
+
+    A model is only as valid as the residual it cannot hide.
+
+----------------------------------------------------------------
+SVS-FLAMEFLOW v1.0
+Self-Verifying Science
+----------------------------------------------------------------
